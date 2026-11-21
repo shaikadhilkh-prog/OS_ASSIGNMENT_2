@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS Scheduling Visualizer</title>
+<style>
+:root{--bg:#0b1020;--panel:#121a2e;--panel2:#18233b;--line:#293754;--text:#edf3ff;--muted:#9eacc7;--cyan:#54d8e8;--purple:#a78bfa;--green:#5ee0a0;--orange:#ffbd69;--red:#ff7888}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#172748 0,#0b1020 55%);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:32px 20px 24px;text-align:center;border-bottom:1px solid #263451}header .eyebrow{color:var(--cyan);font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:12px}h1{font-size:clamp(28px,5vw,46px);line-height:1.1;margin:10px 0}header p{max-width:720px;margin:12px auto 0;color:var(--muted)}
+main{max-width:1180px;margin:auto;padding:22px 16px 48px}.panel{background:linear-gradient(145deg,rgba(24,35,59,.96),rgba(16,24,42,.96));border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:0 12px 35px #0002}.panel h2{font-size:19px;margin:0 0 14px}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.field label{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}.field select,.field input{width:100%;background:#0c1426;color:var(--text);border:1px solid #354666;border-radius:10px;padding:11px;font:inherit}.button-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.btn{border:1px solid #405578;border-radius:10px;padding:10px 15px;background:#1a2945;color:var(--text);font-weight:750;cursor:pointer;transition:.2s}.btn:hover{transform:translateY(-1px);border-color:var(--cyan)}.btn.primary{background:var(--cyan);color:#071321;border-color:var(--cyan)}.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}.note{font-size:13px;color:var(--muted);margin-top:10px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.stat{background:#0b1426;border:1px solid #293957;padding:14px;border-radius:13px}.stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em}.stat strong{display:block;font-size:25px;margin-top:5px}.stat span{color:var(--muted);font-size:12px}
+.two-col{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}.process-table{width:100%;border-collapse:collapse;font-size:13px}.process-table th,.process-table td{text-align:left;padding:10px 8px;border-bottom:1px solid #293754}.process-table th{color:var(--muted);font-size:11px;text-transform:uppercase}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:4px 8px;background:#253653;font-size:11px;font-weight:800}.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.timeline{display:flex;align-items:stretch;min-height:95px;overflow-x:auto;padding:12px 4px 0;gap:4px}.segment{position:relative;min-width:58px;flex:var(--dur) 0 0;border-radius:10px;padding:11px 8px 22px;color:#071321;font-weight:900;text-align:center;animation:pop .35s ease both;box-shadow:0 5px 14px #0003}.segment .range{position:absolute;bottom:5px;left:0;right:0;font-size:10px;font-weight:800}.segment small{display:block;font-size:10px;font-weight:700;opacity:.85}.segment.cs{background:repeating-linear-gradient(135deg,#5a6783,#5a6783 7px,#75829d 7px,#75829d 14px);color:white}.segment.idle{background:#26334b;color:#d6e0f4}
+@keyframes pop{from{opacity:.2;transform:translateY(8px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;padding:0 4px}.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:12px;margin-top:10px}.legend i{width:10px;height:10px;display:inline-block;border-radius:3px;margin-right:5px}
+.current{display:flex;gap:14px;align-items:center;background:#0a1426;border:1px solid #2b3d5c;border-radius:14px;padding:14px}.pulse{width:13px;height:13px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 #5ee0a066;animation:pulse 1.3s infinite}@keyframes pulse{70%{box-shadow:0 0 0 10px #5ee0a000}100%{box-shadow:0 0 0 0 #5ee0a000}}.current strong{font-size:17px}.current p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.table-wrap{overflow-x:auto}.metrics{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}.metrics th,.metrics td{padding:10px 9px;border-bottom:1px solid #2a3855;text-align:right}.metrics th{color:var(--muted);font-size:11px;text-transform:uppercase}.metrics th:first-child,.metrics td:first-child{text-align:left}.metrics tr:last-child td{border-bottom:0}.metrics tfoot td{font-weight:900;color:var(--cyan)}
+.explain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.explain{padding:14px;border:1px solid #2a3956;border-radius:13px;background:#0c1528}.explain h3{margin:0 0 6px;font-size:14px;color:var(--cyan)}.explain p{margin:0;color:var(--muted);font-size:13px}
+.comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.compare-card{background:#0b1426;border:1px solid #2b3b59;border-radius:13px;padding:15px}.compare-card h3{margin:0 0 10px}.compare-card p{color:var(--muted);font-size:13px;margin:5px 0}.recommendation{padding:13px 15px;border-left:3px solid var(--green);background:#102b2b;border-radius:8px;margin-top:12px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:8px 0 0}
+@media(max-width:780px){.two-col{grid-template-columns:1fr}.panel{padding:15px}.process-table{min-width:510px}.timeline{min-height:86px}.segment{min-width:50px}}
+.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:16px 16px 0}.tab{background:#121a2e;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:10px 18px;font:inherit;font-weight:800;cursor:pointer}.tab.on{background:var(--cyan);color:#071321;border-color:var(--cyan)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{background:#1b2a46;border-radius:8px;padding:4px 10px;font-weight:800;font-size:13px;color:var(--muted);transition:.3s}.chip.on{background:var(--green);color:#06210f}
+.sk{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-linejoin:round}.sk.new{stroke-dasharray:1;stroke-dashoffset:1;animation:dr .55s forwards}@keyframes dr{to{stroke-dashoffset:0}}
+.ax{fill:var(--muted);font-size:11px;text-anchor:middle}.gr{stroke:#1d2a46}.rg{stroke:#ffbd6955;stroke-dasharray:3 4}.lb{fill:var(--text);font-size:11px;font-weight:700;text-anchor:middle}.no{fill:var(--muted);font-size:10px}
+.pl{fill:none;stroke:var(--cyan);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:ring 1.2s infinite}@keyframes ring{from{transform:scale(1);opacity:1}to{transform:scale(3);opacity:0}}
+.bar-row{display:grid;grid-template-columns:62px 1fr 48px;gap:10px;align-items:center;margin:6px 0;cursor:pointer;padding:4px 6px;border-radius:9px}.bar-row.sel{background:#1a2945;outline:1px solid var(--cyan)}.bar-row span{text-align:right;font-weight:800}.bar-track{background:#0b1426;border-radius:7px;height:20px;overflow:hidden}.bar{height:100%;background:#4e6fae;border-radius:7px;transition:width .9s cubic-bezier(.2,.8,.2,1)}.bar.best{background:var(--green)}
+.err{color:var(--red);font-size:13px;margin-top:8px}.ok{color:var(--green);font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<header><div class="eyebrow">Operating Systems · Assignment 2</div><h1>OS Scheduling Visualizer</h1><p>Animate how the OS schedules disk requests (FCFS, SSTF, SCAN, C-SCAN, LOOK) and CPU processes (Round Robin, SRTF). Step through every move, compare algorithms, and see why the choice matters.</p></header>
+<nav class="tabs"><button class="tab on" data-t="disk">Part A · Disk Scheduling</button><button class="tab" data-t="cpu">Part B · CPU Scheduling</button></nav>
+<main>
+<div id="tabDisk">
+<section class="panel"><h2>Part A · Disk scheduling — inputs</h2>
+<div class="controls">
+ <div class="field"><label for="dPreset">Test case</label><select id="dPreset"><option value="sample">Assignment sample (FCFS 642 · SSTF 208)</option><option value="starve">SSTF starvation case</option><option value="custom">Custom input</option></select></div>
+ <div class="field"><label for="dSize">Disk size (cylinders)</label><input id="dSize" type="number" value="200"></div>
+ <div class="field"><label for="dHead">Initial head position</label><input id="dHead" type="number" value="50"></div>
+ <div class="field"><label for="dQueue">Request queue</label><input id="dQueue" value="82, 170, 43, 140, 24, 16, 190"></div>
+ <div class="field"><label for="dAlg">Algorithm</label><select id="dAlg"><option value="fcfs">FCFS</option><option value="sstf" selected>SSTF</option><option value="scan">SCAN</option><option value="cscan">C-SCAN</option><option value="look">LOOK</option></select></div>
+ <div class="field"><label for="dDir">Direction (SCAN / C-SCAN / LOOK)</label><select id="dDir"><option value="right">Towards higher cylinders</option><option value="left">Towards lower cylinders</option></select></div>
+ <div class="field"><label for="dSpeed">Animation speed</label><select id="dSpeed"><option value="1100">Slow</option><option value="650" selected>Normal</option><option value="250">Fast</option></select></div>
+</div>
+<p class="note"><label><input type="checkbox" id="dJump" checked> Count the C-SCAN return jump as head movement</label></p>
+<div id="dErr" class="err"></div>
+<div class="button-row"><button class="btn primary" id="dPlay">▶ Auto-play</button><button class="btn" id="dPrev">◀ Previous</button><button class="btn" id="dNext">Next ▶</button><button class="btn" id="dReset">↺ Reset</button></div>
+<p class="note">Tip: use the ← → keys to step. Click any bar in the comparison to switch algorithm.</p>
+</section>
+<section class="panel"><h2>Seek graph · cylinder vs request order</h2>
+<div class="current"><div class="pulse"></div><div><strong id="dNowT">Ready</strong><p id="dNowD"></p></div></div>
+<div style="overflow-x:auto;margin-top:10px"><div id="dSvg"></div></div>
+<div class="legend"><span><i style="background:#5ee0a0"></i>Request served</span><span><i style="background:#ffbd69"></i>Pending request</span><span><i style="background:#ff7888"></i>C-SCAN jump</span><span><i style="border:2px solid #54d8e8"></i>Disk end reached</span></div>
+<h2 style="margin-top:18px;font-size:15px">Service sequence</h2><div id="dSeq" class="chips"></div>
+</section>
+<div class="two-col">
+<section class="panel"><h2>Head movement</h2><div class="stats" id="dStats"></div></section>
+<section class="panel"><h2>Compare all algorithms</h2><div id="dBars"></div><div id="dCheck"></div><div id="dInsight" class="recommendation"></div></section>
+</div>
+</div>
+
+<div id="tabCpu" hidden>
+<section class="panel">
+<h2>01 · Choose a practical activity</h2>
+<div class="controls">
+ <div class="field"><label for="activity">Assignment scenario</label><select id="activity"><option value="a">Activity 1 · Municipal sustainability (no overhead)</option><option value="b">Activity 2 · Climate emergency (1 ms overhead)</option></select></div>
+ <div class="field"><label for="quantum">Time quantum (ms)</label><select id="quantum"><option value="2">2 ms</option><option value="3">3 ms</option><option value="4">4 ms</option></select></div>
+ <div class="field"><label for="algo">CPU algorithm</label><select id="algo"><option value="rr">Round Robin</option><option value="srtf">SRTF (preemptive SJF)</option></select></div>
+ <div class="field"><label for="speed">Animation speed</label><select id="speed"><option value="900">Slow</option><option value="500" selected>Normal</option><option value="180">Fast</option></select></div>
+</div>
+<div class="button-row"><button class="btn primary" id="run">▶ Run animation</button><button class="btn" id="step">Step ▶</button><button class="btn" id="pause">Ⅱ Pause</button><button class="btn" id="reset">↺ Reset</button><button class="btn" id="compare">Compare required quanta</button></div>
+<p class="note" id="scenarioNote">Activity 1: time quantum 2 ms; no context-switching overhead. Compare 2 ms with 3 ms.</p>
+</section>
+<section class="panel">
+<h2>02 · CPU timeline (Gantt chart)</h2>
+<div class="current"><div class="pulse"></div><div><strong id="nowTitle">Ready to start</strong><p id="nowDesc">Press Run animation or Step to see how the ready queue is served.</p></div></div>
+<div id="timeline" class="timeline" aria-label="Gantt chart"></div><div class="axis" id="axis"><span>0 ms</span><span>Timeline will appear here</span></div>
+<div class="legend"><span><i style="background:#54d8e8"></i>P1</span><span><i style="background:#a78bfa"></i>P2</span><span><i style="background:#5ee0a0"></i>P3</span><span><i style="background:#ffbd69"></i>P4</span><span><i style="background:repeating-linear-gradient(135deg,#5a6783,#5a6783 4px,#75829d 4px,#75829d 8px)"></i>Context switch</span></div>
+</section>
+<div class="two-col">
+<section class="panel"><h2>03 · Process metrics</h2><div class="table-wrap"><table class="metrics"><thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>First start</th><th>Completion</th><th>Turnaround</th><th>Waiting</th><th>Response</th></tr></thead><tbody id="metricsBody"></tbody><tfoot id="metricsFoot"></tfoot></table></div><p class="note">Turnaround = completion − arrival. Waiting = turnaround − burst. Response = first CPU start − arrival. Values update as the animation progresses.</p></section>
+<section class="panel"><h2>04 · Ready queue & processes</h2>
+<div class="controls" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:12px">
+ <div class="field"><label for="newTask">Task name</label><input id="newTask" maxlength="55" placeholder="e.g. Sensor monitoring" value="New sustainability task"></div>
+ <div class="field"><label for="newArrival">Arrival time (ms)</label><input id="newArrival" type="number" min="0" max="10000" value="0"></div>
+ <div class="field"><label for="newBurst">Burst time (ms)</label><input id="newBurst" type="number" min="1" max="10000" value="3"></div>
+</div>
+<div class="button-row" style="margin-top:0;margin-bottom:12px"><button class="btn primary" id="addProcess">＋ Add process</button><button class="btn" id="restoreProcesses">Restore assignment defaults</button></div>
+<p class="note">Add your own process or remove one from the list. Any change recalculates the schedule and metrics. Process IDs stay unique; up to 12 processes are supported.</p>
+<div id="processCards"></div><h2 style="margin-top:18px">Live counters</h2><div class="stats" id="liveStats"></div></section>
+</div>
+<section class="panel"><h2>05 · What is happening?</h2><div class="explain-grid"><div class="explain"><h3>Arrival time</h3><p>A process joins the ready queue when its arrival time is reached. Processes already waiting stay in queue order.</p></div><div class="explain"><h3>Time quantum</h3><p>The CPU runs the queue's first process for at most this many milliseconds, or until it finishes.</p></div><div class="explain"><h3>Preemption</h3><p>If work remains when its quantum expires, the process goes to the back of the ready queue so others get CPU time.</p></div><div class="explain"><h3>Context switch</h3><p>In Activity 2, changing from one process to another costs 1 ms. This time is shown separately and does not execute a process.</p></div></div><div id="lesson" class="recommendation">Start the simulation to see the scheduling rule in action.</div></section>
+<section class="panel"><h2>06 · Compare time quanta</h2><p class="note">Use this to meet the assignment requirement: Activity 1 compares 2 ms vs 3 ms; Activity 2 compares 2 ms vs 4 ms.</p><div id="comparison" class="comparison"><div class="compare-card"><h3>Not run yet</h3><p>Choose an activity and click “Compare required quanta”.</p></div></div><div id="recommendation"></div></section>
+<footer>OS Scheduling Visualizer · Part A disk scheduling · Part B Round Robin + SRTF.</footer>
+</div></main>
+<script>
+const scenarios={
+ a:{name:"Municipal sustainability services",overhead:0,processes:[
+ {id:"P1",task:"Water-quality monitoring",arrival:0,burst:5,color:"#54d8e8"},
+ {id:"P2",task:"Waste-collection scheduling",arrival:1,burst:3,color:"#a78bfa"},
+ {id:"P3",task:"Traffic-pollution analysis",arrival:2,burst:4,color:"#5ee0a0"},
+ {id:"P4",task:"Public energy-use monitoring",arrival:3,burst:2,color:"#ffbd69"}],quanta:[2,3]},
+ b:{name:"Climate emergency response services",overhead:1,processes:[
+ {id:"P1",task:"Flood-warning analysis",arrival:0,burst:5,color:"#54d8e8"},
+ {id:"P2",task:"Air-quality alert generation",arrival:1,burst:4,color:"#a78bfa"},
+ {id:"P3",task:"Emergency evacuation-route update",arrival:2,burst:3,color:"#5ee0a0"},
+ {id:"P4",task:"Renewable-grid status monitoring",arrival:3,burst:2,color:"#ffbd69"}],quanta:[2,4]}
+};
+let result=null,index=0,timer=null,playing=false,history=[],queueSnapshot=[];
+const $=id=>document.getElementById(id);
+const customProcesses={a:scenarios.a.processes.map(p=>({...p})),b:scenarios.b.processes.map(p=>({...p}))};
+const palette=["#54d8e8","#a78bfa","#5ee0a0","#ffbd69","#ff7888","#79a9ff","#e8a4ff","#b9df74"];
+function getScenario(){const key=$("activity").value;return {...scenarios[key],processes:customProcesses[key].map(p=>({...p}))}}
+function nextProcessId(){const ids=getScenario().processes.map(p=>Number(p.id.slice(1))).filter(Number.isFinite);let n=1;while(ids.includes(n))n++;return "P"+n}
+function addProcess(){const task=$("newTask").value.trim(),arrival=Number($("newArrival").value),burst=Number($("newBurst").value);if(!task){alert("Please enter a task name.");return}if(!Number.isInteger(arrival)||arrival<0||!Number.isInteger(burst)||burst<1){alert("Arrival must be 0 or more, and burst time must be at least 1 ms.");return}const key=$("activity").value,ps=customProcesses[key];if(ps.length>=12){alert("For readability, the simulator supports up to 12 processes.");return}const id=nextProcessId();ps.push({id,task,arrival,burst,color:palette[(Number(id.slice(1))-1)%palette.length]});ps.sort((a,b)=>a.arrival-b.arrival||Number(a.id.slice(1))-Number(b.id.slice(1)));reset();invalidateComparison()}
+function removeProcess(id){const key=$("activity").value,ps=customProcesses[key];if(ps.length<=1){alert("At least one process must remain in the schedule.");return}customProcesses[key]=ps.filter(p=>p.id!==id);reset();invalidateComparison()}
+function invalidateComparison(){$("comparison").innerHTML='<div class="compare-card"><h3>Run comparison again</h3><p>Process list changed. Click “Compare required quanta” to refresh the comparison.</p></div>';$("recommendation").innerHTML=""}
+function escapeHtml(value){return String(value).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function simulate(s,quantum,algo){
+ if((algo||$("algo").value)==="srtf")return simSRTF(s);
+ const ps=s.processes.map(p=>({...p,remaining:p.burst,firstStart:null,completion:null,executed:0}));
+ let time=0,ready=[],next=0,segments=[],switches=0,overhead=0,lastProcess=null,guard=0;
+ const addArrivals=()=>{while(next<ps.length&&ps[next].arrival<=time){ready.push(ps[next]);next++}};
+ while(ps.some(p=>p.remaining>0)&&guard++<1000){
+  addArrivals();
+  if(!ready.length){if(next<ps.length){const start=time;time=ps[next].arrival;segments.push({type:"idle",start,end:time});addArrivals();}continue;}
+  const p=ready.shift();
+  if(lastProcess!==null&&lastProcess!==p.id&&s.overhead>0){
+    const start=time;time+=s.overhead;overhead+=s.overhead;switches++;segments.push({type:"cs",start,end:time,from:lastProcess,to:p.id});
+    // Processes arriving during switch overhead enter the queue before the switched-to process runs.
+    while(next<ps.length&&ps[next].arrival<=time){ready.push(ps[next]);next++}
+  } else if(lastProcess!==null&&lastProcess!==p.id){switches++}
+  const start=time;if(p.firstStart===null)p.firstStart=time;
+  const runFor=Math.min(quantum,p.remaining),end=time+runFor;
+  segments.push({type:"process",id:p.id,start,end,color:p.color,task:p.task});p.remaining-=runFor;p.executed+=runFor;time=end;
+  while(next<ps.length&&ps[next].arrival<=time){ready.push(ps[next]);next++}
+  lastProcess=p.id;
+  if(p.remaining>0)ready.push(p);else p.completion=time;
+ }
+ const metrics=ps.map(p=>({...p,turnaround:p.completion===null?null:p.completion-p.arrival,waiting:p.completion===null?null:p.completion-p.arrival-p.burst,response:p.firstStart===null?null:p.firstStart-p.arrival}));
+ const done=metrics.every(p=>p.completion!==null),avg=key=>done?metrics.reduce((a,p)=>a+p[key],0)/metrics.length:null;
+ const totalTime=segments.length?segments[segments.length-1].end:0;
+ return {segments,metrics,switches,overhead,totalTime,avgTurnaround:avg("turnaround"),avgWaiting:avg("waiting"),avgResponse:avg("response"),efficiency:totalTime?100*(totalTime-overhead)/totalTime:100,quantum,scenario:s};
+}
+function reset(){stop();result=simulate(getScenario(),+$("quantum").value);index=0;history=[];queueSnapshot=[];render();$("nowTitle").textContent="Ready to start";$("nowDesc").textContent="Press Run animation or Step to see how the ready queue is served.";updateLesson()}
+function stop(){if(timer)clearTimeout(timer);timer=null;playing=false;$("run").textContent="▶ Run animation"}
+function render(){
+ const segs=result.segments.slice(0,index);$("timeline").innerHTML="";
+ segs.forEach((seg,i)=>{const el=document.createElement("div");el.className="segment "+(seg.type==="cs"?"cs":seg.type==="idle"?"idle":"");el.style.setProperty("--dur",Math.max(.5,seg.end-seg.start));if(seg.type==="process"){el.style.background=seg.color;el.textContent=seg.id;el.innerHTML=`${seg.id}<small>${seg.end-seg.start} ms</small><span class="range">${seg.start}–${seg.end}</span>`}else if(seg.type==="cs"){el.innerHTML=`SWITCH<small>${seg.end-seg.start} ms</small><span class="range">${seg.start}–${seg.end}</span>`}else{el.innerHTML=`IDLE<span class="range">${seg.start}–${seg.end}</span>`}el.title=`${seg.start} to ${seg.end} ms`; $("timeline").appendChild(el)});
+ const end=segs.length?segs[segs.length-1].end:0;$("axis").innerHTML=`<span>0 ms</span><span>${end} ms elapsed</span>`;
+ const current=segs[segs.length-1];if(current){$("nowTitle").textContent=current.type==="cs"?`Context switch: ${current.from} → ${current.to}`:current.type==="idle"?"CPU idle":`${current.id} · ${current.task}`;$("nowDesc").textContent=current.type==="cs"?`The CPU spends ${current.end-current.start} ms switching. No process executes during this interval.`:current.type==="idle"?`No process has arrived yet; time advances to the next arrival.`:`Runs from ${current.start} to ${current.end} ms. ${current.end-current.start} ms of CPU time used in this slice.`}
+ renderMetrics(segs);renderCards(segs);renderStats(segs);
+}
+function renderMetrics(segs){
+ const completed=new Set();let first={},completion={};segs.forEach(x=>{if(x.type==="process"){if(first[x.id]===undefined)first[x.id]=x.start;completion[x.id]=x.end}});
+ $("metricsBody").innerHTML=result.metrics.map(p=>{const c=completion[p.id],f=first[p.id],ta=c===undefined?"—":c-p.arrival,wait=c===undefined?"—":ta-p.burst,resp=f===undefined?"—":f-p.arrival;return `<tr><td><b style="color:${p.color}">${p.id}</b></td><td>${p.arrival}</td><td>${p.burst}</td><td>${f===undefined?"—":f}</td><td>${c===undefined?"—":c}</td><td>${ta}</td><td>${wait}</td><td>${resp}</td></tr>`}).join("");
+ const done=result.metrics.every(p=>completion[p.id]!==undefined&&p.remaining===0);
+ if(index===result.segments.length){const m=result.metrics;$("metricsFoot").innerHTML=`<tr><td colspan="5">Average</td><td>${result.avgTurnaround.toFixed(2)}</td><td>${result.avgWaiting.toFixed(2)}</td><td>${result.avgResponse.toFixed(2)}</td></tr>`}else $("metricsFoot").innerHTML="";
+}
+function renderCards(segs){
+ const now=segs.length?segs[segs.length-1].end:0;
+ const arrivals=getScenario().processes.filter(p=>p.arrival<=now);
+ const active=segs.filter(s=>s.type==="process").reduce((a,s)=>{a[s.id]=(a[s.id]||0)+(s.end-s.start);return a},{});
+ $("processCards").innerHTML=getScenario().processes.map(p=>{const left=p.burst-(active[p.id]||0),done=left===0,started=active[p.id]>0;return `<div style="padding:10px 0;border-bottom:1px solid #293754"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:${p.color}">${p.id} · ${escapeHtml(p.task)}</b><div style="display:flex;gap:7px;align-items:center"><span class="pill">${done?"Completed":p.arrival>now?"Not arrived":started?"Ready / running":"Ready"}</span><button class="btn remove-process" data-process="${p.id}" style="padding:5px 9px;font-size:11px;border-color:#75404e;color:#ff9aaa" aria-label="Remove ${p.id}">✕ Remove</button></div></div><div style="height:6px;background:#25334e;border-radius:9px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${(active[p.id]||0)/p.burst*100}%;background:${p.color};transition:width .3s"></div></div><small style="color:var(--muted)">Arrival ${p.arrival} ms · Remaining ${left} ms / ${p.burst} ms</small></div>`}).join("");
+ document.querySelectorAll(".remove-process").forEach(btn=>btn.addEventListener("click",()=>removeProcess(btn.dataset.process)));
+}
+function renderStats(segs){
+ const time=segs.length?segs[segs.length-1].end:0,over=segs.filter(s=>s.type==="cs").reduce((a,s)=>a+s.end-s.start,0),switches=segs.filter(s=>s.type==="cs").length;
+ const cpu=segs.filter(s=>s.type==="process").reduce((a,s)=>a+s.end-s.start,0);
+ const items=[["Simulated time",`${time} ms`],["Context switches",switches],["Switch overhead",`${over} ms`],["CPU efficiency",`${time?100*cpu/time:100}%`]];
+ $("liveStats").innerHTML=items.map(([l,v])=>`<div class="stat"><small>${l}</small><strong>${v}</strong></div>`).join("");
+}
+function updateLesson(){
+ const s=getScenario(),q=+$("quantum").value;
+ $("scenarioNote").textContent=`${$("activity").value==="a"?"Activity 1: no context-switching overhead.":"Activity 2: 1 ms overhead whenever CPU changes from one process to another."} Selected quantum: ${q} ms.`;
+ $("lesson").textContent=$("activity").value==="a"?"No context-switch overhead is charged. A smaller quantum generally rotates CPU access more frequently; a larger quantum can reduce the number of slices and may change waiting and response times.":"Each change to a different process adds a visible 1 ms context-switch interval. This increases total elapsed time and lowers CPU efficiency, so compare the overhead against the need for fast emergency response.";
+}
+function step(){stop();if(index<result.segments.length){index++;render();if(index===result.segments.length){$("nowTitle").textContent="Simulation complete";$("nowDesc").textContent="All processes have finished. Review the metrics and comparison."}}}
+function run(){if(playing){stop();return}if(index>=result.segments.length){index=0}playing=true;$("run").textContent="Ⅱ Pause";const tick=()=>{if(!playing)return;if(index>=result.segments.length){stop();$("nowTitle").textContent="Simulation complete";$("nowDesc").textContent="All processes have finished. Review the metrics and comparison.";return}index++;render();timer=setTimeout(tick,+$("speed").value)};tick()}
+function compare(){
+ stop();const s=getScenario(),qs=s.quanta,results=qs.map(q=>simulate(s,q,"rr"));
+ $("comparison").innerHTML=results.map(r=>`<div class="compare-card"><h3>Quantum ${r.quantum} ms</h3><p>Average turnaround: <b>${r.avgTurnaround.toFixed(2)} ms</b></p><p>Average waiting: <b>${r.avgWaiting.toFixed(2)} ms</b></p><p>Average response: <b>${r.avgResponse.toFixed(2)} ms</b></p><p>Context switches: <b>${r.switches}</b></p><p>Switch overhead: <b>${r.overhead} ms</b></p><p>Total elapsed: <b>${r.totalTime} ms</b></p><p>CPU efficiency: <b>${r.efficiency.toFixed(1)}%</b></p></div>`).join("");
+ {const r=simulate(s,0,"srtf");$("comparison").insertAdjacentHTML("beforeend",`<div class="compare-card"><h3>SRTF (preemptive)</h3><p>Average turnaround: <b>${r.avgTurnaround.toFixed(2)} ms</b></p><p>Average waiting: <b>${r.avgWaiting.toFixed(2)} ms</b></p><p>Average response: <b>${r.avgResponse.toFixed(2)} ms</b></p><p>Context switches: <b>${r.switches}</b></p><p>Total elapsed: <b>${r.totalTime} ms</b> (no overhead charged)</p></div>`)}
+ const bestWait=[...results].sort((a,b)=>a.avgWaiting-b.avgWaiting)[0],leastOver=[...results].sort((a,b)=>a.overhead-b.overhead||a.switches-b.switches)[0];
+ const chosen=s.overhead?leastOver:bestWait;
+ $("recommendation").innerHTML=`<div class="recommendation"><b>How to interpret:</b> ${s.overhead?"Quantum "+leastOver.quantum+" ms has the lower switching overhead (or ties for lowest). For emergency services, also inspect average response time before choosing it.":"Quantum "+bestWait.quantum+" ms has the lower average waiting time in this workload. Also consider response time and the number of context switches."} There is no universally best quantum: use the metrics together with the workload's urgency.</div>`;
+}
+$("activity").addEventListener("change",()=>{const qs=getScenario().quanta;$("quantum").value=String(qs[0]);$("compare").textContent="Compare required quanta";reset();updateLesson();$("comparison").innerHTML='<div class="compare-card"><h3>Not run yet</h3><p>Click “Compare required quanta” to calculate both runs.</p></div>';$("recommendation").innerHTML=""});
+$("quantum").addEventListener("change",()=>{reset();updateLesson()});
+$("speed").addEventListener("change",()=>{});
+$("run").addEventListener("click",run);$("step").addEventListener("click",step);$("pause").addEventListener("click",stop);$("reset").addEventListener("click",reset);$("compare").addEventListener("click",compare);
+$("addProcess").addEventListener("click",addProcess);
+$("restoreProcesses").addEventListener("click",()=>{const key=$("activity").value;customProcesses[key]=scenarios[key].processes.map(p=>({...p}));reset();invalidateComparison()});
+reset();updateLesson();
+</script>
+<script>
+// ===== Part A: Disk scheduling =====
+const DN={fcfs:"FCFS",sstf:"SSTF",scan:"SCAN",cscan:"C-SCAN",look:"LOOK"};
+const PRE={sample:[200,50,"82, 170, 43, 140, 24, 16, 190"],starve:[200,100,"199, 101, 99, 102, 98, 103, 97, 104, 96"]};
+let ds=null,st=0,dt=null;
+// path = [[cylinder, isRequest, isJump], ...]; first point is the head start
+function diskPath(alg,h,R,size,dir,cj){
+ const L=size-1,P=[[h,0]],r=c=>P.push([c,1]),e=(c,j)=>{if(j||P[P.length-1][0]!==c)P.push([c,0,j?1:0])};
+ const s=[...R].sort((a,b)=>a-b),dn=s.filter(x=>x<h).reverse(),up=s.filter(x=>x>h);
+ if(alg==="fcfs")R.forEach(r);
+ else if(alg==="sstf"){let c=h,q=[...R];while(q.length){let b=0;q.forEach((x,i)=>{if(Math.abs(x-c)<Math.abs(q[b]-c))b=i});c=q.splice(b,1)[0];r(c)}}
+ else{
+  s.filter(x=>x===h).forEach(r);
+  const fw=dir==="right",a=fw?up:dn,b=fw?dn:up,end=fw?L:0,oth=fw?0:L;
+  a.forEach(r);
+  if(alg==="scan"){e(end);b.forEach(r)}
+  else if(alg==="look")b.forEach(r);
+  else{e(end);if(b.length){e(oth,1);[...b].reverse().forEach(r)}}
+ }
+ let tot=0;const seg=[];
+ for(let i=1;i<P.length;i++){const d=P[i][2]&&!cj?0:Math.abs(P[i][0]-P[i-1][0]);seg.push(d);tot+=d}
+ return {P,seg,tot};
+}
+function readDisk(){
+ const size=Number($("dSize").value),hv=$("dHead").value.trim(),head=Number(hv),R=$("dQueue").value.split(/[\s,;]+/).filter(Boolean).map(Number),err=[];
+ if(!Number.isInteger(size)||size<2||size>1000)err.push("Disk size must be a whole number between 2 and 1000 cylinders.");
+ else{
+  if(hv===""||!Number.isInteger(head)||head<0||head>=size)err.push(`Head position must be a whole number between 0 and ${size-1}.`);
+  if(!R.length)err.push("Enter at least one request.");
+  else if(R.length>25)err.push("Please use 25 requests or fewer so the graph stays readable.");
+  else if(R.some(x=>!Number.isInteger(x)||x<0||x>=size))err.push(`Every request must be a whole number between 0 and ${size-1}.`);
+ }
+ $("dErr").innerHTML=err.map(x=>"⚠ "+escapeHtml(x)).join("<br>");
+ return err.length?null:{size,head,R,dir:$("dDir").value,cj:$("dJump").checked};
+}
+function dBuild(){
+ dStop();const c=readDisk();
+ if(!c){ds=null;["dSvg","dBars","dSeq","dStats","dCheck","dInsight"].forEach(i=>$(i).innerHTML="");$("dNowT").textContent="Fix the input";$("dNowD").textContent="";return}
+ ds={c,res:diskPath($("dAlg").value,c.head,c.R,c.size,c.dir,c.cj)};st=0;dRender();dCompare();
+}
+function dRender(){
+ if(!ds)return;const {c,res}=ds,P=res.P,n=P.length-1,L=c.size-1,W=720,X=v=>30+v/L*660,Y=i=>110+i*30,H=Y(n)+26,alg=$("dAlg").value;
+ let moved=0;for(let i=1;i<=st;i++)moved+=res.seg[i-1];
+ let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:560px;max-width:${W}px;display:block;margin:auto">`;
+ [0,.25,.5,.75,1].forEach(f=>{const v=Math.round(f*L);s+=`<text class="ax" x="${X(v)}" y="14">${v}</text><line class="gr" x1="${X(v)}" x2="${X(v)}" y1="20" y2="${H-8}"/>`});
+ s+=`<line x1="${X(0)}" x2="${X(L)}" y1="54" y2="54" stroke="#3a4b6e" stroke-width="5" stroke-linecap="round"/>`;
+ P.forEach((p,i)=>{if(p[1])s+=`<line class="rg" x1="${X(p[0])}" x2="${X(p[0])}" y1="60" y2="${H-8}"/><circle cx="${X(p[0])}" cy="54" r="5" fill="${i<=st?"#5ee0a0":"#ffbd69"}"/>`});
+ s+=`<polygon points="${X(P[st][0])-8},34 ${X(P[st][0])+8},34 ${X(P[st][0])},48" fill="#54d8e8"/><text class="lb" x="${X(P[st][0])}" y="30">HEAD</text>`;
+ for(let i=1;i<=st;i++){const a=P[i-1],b=P[i],d=`M${X(a[0])} ${Y(i-1)}L${X(b[0])} ${Y(i)}`;
+  s+=b[2]?`<path class="sk" d="${d}" stroke="#ff7888" stroke-dasharray="6 5"/>`:`<path class="sk ${i===st?"new":""}" pathLength="1" d="${d}"/>`}
+ for(let i=0;i<=st;i++){const p=P[i];s+=`<circle cx="${X(p[0])}" cy="${Y(i)}" r="5.5" fill="${i===0?"#fff":p[1]?"#5ee0a0":"#0b1020"}" stroke="${p[1]||i===0?"none":"#54d8e8"}" stroke-width="2"/><text class="lb" x="${X(p[0])}" y="${Y(i)-9}">${p[0]}</text><text class="no" x="4" y="${Y(i)+3}">#${i}</text>`}
+ s+=`<circle class="pl" cx="${X(P[st][0])}" cy="${Y(st)}" r="6"/></svg>`;
+ $("dSvg").innerHTML=s;
+ $("dSeq").innerHTML=P.map((p,i)=>p[1]?`<span class="chip ${i<=st?"on":""}">${p[0]}</span>`:"").join("");
+ const nr=P.filter(p=>p[1]).length,sv=P.slice(0,st+1).filter(p=>p[1]).length;
+ $("dStats").innerHTML=[["Algorithm",DN[alg]],["Moved so far",moved],["Total movement",res.tot],["Served",`${sv} / ${nr}`],["Avg seek / request",(res.tot/nr).toFixed(1)]].map(([l,v])=>`<div class="stat"><small>${l}</small><strong>${v}</strong></div>`).join("");
+ if(st===0){$("dNowT").textContent=`Head starts at cylinder ${P[0][0]}`;$("dNowD").textContent=`${nr} requests are waiting. Press Next or Auto-play.`}
+ else{const a=P[st-1],b=P[st];$("dNowT").textContent=`Seek ${a[0]} → ${b[0]} · ${res.seg[st-1]} cylinders`;
+  $("dNowD").textContent=(b[2]?`C-SCAN return jump${c.cj?"":" (not counted)"}.`:b[1]?`Request ${b[0]} serviced.`:"Head reaches the disk end before turning.")+(st===n?` Finished — total head movement ${res.tot}.`:"")}
+}
+function dCompare(){
+ const c=ds.c,cur=$("dAlg").value,rs=Object.keys(DN).map(a=>({a,t:diskPath(a,c.head,c.R,c.size,c.dir,c.cj).tot})),mx=Math.max(...rs.map(r=>r.t))||1,mn=Math.min(...rs.map(r=>r.t));
+ $("dBars").innerHTML=rs.map(r=>`<div class="bar-row ${r.a===cur?"sel":""}" data-a="${r.a}" title="Click to animate ${DN[r.a]}"><b>${DN[r.a]}</b><div class="bar-track"><div class="bar ${r.t===mn?"best":""}" style="width:0" data-w="${r.t/mx*100}"></div></div><span>${r.t}</span></div>`).join("");
+ requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll("#dBars .bar").forEach(b=>b.style.width=b.dataset.w+"%")));
+ document.querySelectorAll("#dBars .bar-row").forEach(x=>x.onclick=()=>{$("dAlg").value=x.dataset.a;dBuild()});
+ const t=a=>rs.find(r=>r.a===a).t,best=rs.filter(r=>r.t===mn).map(r=>DN[r.a]).join(" / "),f=t("fcfs");
+ const ok=c.size===200&&c.head===50&&c.R.join()==="82,170,43,140,24,16,190";
+ $("dCheck").innerHTML=ok?(t("fcfs")===642&&t("sstf")===208?`<div class="ok">✓ Matches the assignment's expected output: FCFS = 642, SSTF = 208.</div>`:`<div class="err">Does not match expected FCFS = 642, SSTF = 208.</div>`):"";
+ $("dInsight").innerHTML=`<b>Lowest head movement:</b> ${best} (${mn} cylinders${f?`, ${Math.round(100*(f-mn)/f)}% less than FCFS`:""}). Less arm travel means less seek time and less mechanical energy — useful on a low-power or solar server. But SSTF can starve far-away requests; SCAN-family algorithms bound the wait.`;
+}
+function dStop(){clearTimeout(dt);dt=null;$("dPlay").textContent="▶ Auto-play"}
+function dGo(k){if(!ds)return;dStop();st=Math.max(0,Math.min(ds.res.P.length-1,k));dRender()}
+function dPlay(){if(!ds)return;if(dt){dStop();return}if(st>=ds.res.P.length-1)st=0;$("dPlay").textContent="Ⅱ Pause";
+ const t=()=>{if(st>=ds.res.P.length-1){dStop();return}st++;dRender();dt=setTimeout(t,+$("dSpeed").value)};t()}
+function fillPreset(){const p=PRE[$("dPreset").value];if(p){$("dSize").value=p[0];$("dHead").value=p[1];$("dQueue").value=p[2]}dBuild()}
+$("dPreset").onchange=fillPreset;
+["dSize","dHead","dQueue"].forEach(i=>$(i).addEventListener("change",()=>{$("dPreset").value="custom";dBuild()}));
+["dAlg","dDir","dJump"].forEach(i=>$(i).addEventListener("change",dBuild));
+$("dPlay").onclick=dPlay;$("dNext").onclick=()=>dGo(st+1);$("dPrev").onclick=()=>dGo(st-1);$("dReset").onclick=()=>dGo(0);
+document.addEventListener("keydown",e=>{if($("tabDisk").hidden||/INPUT|SELECT/.test(document.activeElement.tagName))return;if(e.key==="ArrowRight")dGo(st+1);if(e.key==="ArrowLeft")dGo(st-1)});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));$("tabDisk").hidden=b.dataset.t!=="disk";$("tabCpu").hidden=b.dataset.t!=="cpu"});
+dBuild();
+// ===== Part B: SRTF (second CPU algorithm, alongside Round Robin) =====
+function simSRTF(s){
+ const ps=s.processes.map(p=>({...p,remaining:p.burst,firstStart:null,completion:null}));let t=0,segs=[],left=ps.length;
+ while(left>0){
+  const rdy=ps.filter(p=>p.remaining>0&&p.arrival<=t).sort((a,b)=>a.remaining-b.remaining||a.arrival-b.arrival),p=rdy[0],fut=ps.filter(x=>x.remaining>0&&x.arrival>t).map(x=>x.arrival);
+  if(!p){const n=Math.min(...fut);segs.push({type:"idle",start:t,end:n});t=n;continue}
+  if(p.firstStart===null)p.firstStart=t;
+  const run=Math.min(p.remaining,fut.length?Math.min(...fut)-t:Infinity),last=segs[segs.length-1];
+  if(last&&last.type==="process"&&last.id===p.id&&last.end===t)last.end+=run;else segs.push({type:"process",id:p.id,start:t,end:t+run,color:p.color,task:p.task});
+  p.remaining-=run;t+=run;if(!p.remaining){p.completion=t;left--}
+ }
+ const metrics=ps.map(p=>({...p,turnaround:p.completion-p.arrival,waiting:p.completion-p.arrival-p.burst,response:p.firstStart-p.arrival})),avg=k=>metrics.reduce((a,p)=>a+p[k],0)/metrics.length;
+ const pr=segs.filter(x=>x.type==="process"),sw=pr.filter((x,i)=>i&&pr[i-1].id!==x.id).length;
+ return {segments:segs,metrics,switches:sw,overhead:0,totalTime:t,avgTurnaround:avg("turnaround"),avgWaiting:avg("waiting"),avgResponse:avg("response"),efficiency:100,quantum:0,scenario:s};
+}
+const _ul=updateLesson;updateLesson=function(){_ul();if($("algo").value==="srtf")$("lesson").textContent="SRTF (Shortest Remaining Time First) is preemptive: whenever a process arrives or finishes, the CPU picks the ready process with the least remaining burst. It minimises average waiting time but can starve long jobs. Context-switch overhead is not charged in this view."};
+$("algo").addEventListener("change",()=>{$("quantum").disabled=$("algo").value==="srtf";reset();updateLesson()});
+</script>
+</body>
+</html>
